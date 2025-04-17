@@ -1,3 +1,12 @@
+/*=====================================
+  SISTEMAS LEANDROUNO
+  ANTE CUALQUIER DUDA COMUNIQUESE :
+  WHATSAPP 1155016504
+  SISTEMAS@LEANDROUNO.COM.AR
+  WWW.LEANDROUNO.COM
+  PROHIBIDA SU VENTA TOTAL O PARCIAL 
+  SIN CONSENTIMIENTO DEL PROGRAMADOR
+ ======================================*/
 #include "HX711.h"
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
