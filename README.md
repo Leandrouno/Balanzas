@@ -1,2 +1,2 @@
 # Balanzas
-BAlanzas con Arduino
+Balanzas con Arduino
