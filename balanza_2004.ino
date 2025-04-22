@@ -21,7 +21,7 @@
 
 // Objetos
 HX711 balanza;
-LiquidCrystal_I2C lcd(0x27, 20, 4); // LCD 20x4
+LiquidCrystal_I2C lcd(0x27, 20, 4); // Cambiar 0x27 si es necesario
 
 // Variables de peso
 float pesoActual = 0.0;
@@ -41,12 +41,14 @@ bool estadoAnteriorSet10 = HIGH;
 unsigned long ultimaLecturaTara = 0;
 unsigned long ultimaLecturaSet10 = 0;
 const unsigned long debounceDelay = 150;
+bool esperandoCambioFrase = false;
+unsigned long pausaFraseDesde = 0;
+const unsigned long pausaFrase = 2000;
 
 // Refresco
 unsigned long ultimaActualizacion = 0;
 const unsigned long intervaloActualizacion = 250;
 
-// Frases motivadoras
 const char* frasesMotivadoras[] = {
   "Sigue adelante, puedes lograrlo!",
   "Cada paso cuenta.",
@@ -67,13 +69,15 @@ const char* frasesMotivadoras[] = {
   "Lo mejor esta por venir.",
   "Sigue tu intuicion.",
   "Transforma obstaculos en oportunidades.",
-  "Todo esfuerzo tiene su recompensa."
+  "Todo esfuerzo tiene su recompensa.",
+  "La motivacion te impulsa, el habito te mantiene."
 };
+
 const int totalFrases = sizeof(frasesMotivadoras) / sizeof(frasesMotivadoras[0]);
 int indiceFrase = 0;
 int offsetScroll = 0;
 unsigned long ultimaAnimacion = 0;
-const unsigned long intervaloAnimacion = 300;
+const unsigned long intervaloAnimacion = 500;
 
 void setup() {
   Serial.begin(9600);
@@ -87,7 +91,7 @@ void setup() {
   lcd.clear();
 
   balanza.begin(DT, SCK);
-  balanza.set_scale(20223); // Ajustar según calibración
+  balanza.set_scale(20.223); // Ajustar según calibración
   balanza.tare();
 
   pinMode(PIN_TARA, INPUT_PULLUP);
@@ -120,42 +124,66 @@ void loop() {
     cantidadObjetos = 0;
   }
 
-  // Refrescar pantalla principal
-  if (ahora - ultimaActualizacion > intervaloActualizacion) {
-    lcd.setCursor(0, 0);
+  // Refrescar pantalla y serial
+  // if (ahora - ultimaActualizacion > intervaloActualizacion) {
+  //   lcd.setCursor(0, 0);
+  //   lcd.print("Peso: ");
+  //   lcd.print(pesoActual, 2);
+  //   lcd.print(" kg  ");
+
+  //   lcd.setCursor(0, 1);
+  //   lcd.print("Cant: ");
+  //   lcd.print(cantidadObjetos);
+  //   lcd.print("     ");
+
+  //   Serial.print("Peso (kg): ");
+  //   Serial.print(pesoActual, 2);
+  //   Serial.print(" | Cantidad: ");
+  //   Serial.println(cantidadObjetos);
+
+  //   ultimaActualizacion = ahora;
+  // }
+
+  if (esperandoCambioFrase) {
+  if (ahora - pausaFraseDesde >= pausaFrase) {
+    offsetScroll = 0;
+    indiceFrase = (indiceFrase + 1) % totalFrases;
+    esperandoCambioFrase = false;
+  }
+} else if (ahora - ultimaAnimacion > intervaloAnimacion) {
+
+      lcd.setCursor(0, 0);
     lcd.print("Peso: ");
-    lcd.print(pesoActual, 3);
-    lcd.print(" kg       ");
+    lcd.print(pesoActual, 2);
+    lcd.print(" kg  ");
 
     lcd.setCursor(0, 1);
-    lcd.print("Cantidad: ");
+    lcd.print("Cant: ");
     lcd.print(cantidadObjetos);
-    lcd.print("           ");
+    lcd.print("     ");
 
     Serial.print("Peso (kg): ");
-    Serial.print(pesoActual, 3);
+    Serial.print(pesoActual, 2);
     Serial.print(" | Cantidad: ");
     Serial.println(cantidadObjetos);
+  String frase = frasesMotivadoras[indiceFrase];
+  int longitud = frase.length();
 
-    ultimaActualizacion = ahora;
+  if (offsetScroll + 20 >= longitud) {
+    esperandoCambioFrase = true;
+    pausaFraseDesde = ahora;
   }
 
-  // Animar frases motivacionales
-  if (ahora - ultimaAnimacion > intervaloAnimacion) {
-    String frase = frasesMotivadoras[indiceFrase];
-    int longitud = frase.length();
-    String subfrase = frase.substring(offsetScroll, offsetScroll + 20);
-    lcd.setCursor(0, 3);
-    lcd.print(subfrase);
-    offsetScroll++;
+  String subfrase = frase.substring(offsetScroll, min(offsetScroll + 20, longitud));
 
-    if (offsetScroll + 20 > longitud) {
-      offsetScroll = 0;
-      indiceFrase = (indiceFrase + 1) % totalFrases;
-    }
+  lcd.setCursor(0, 3);
+  lcd.print("                    "); // Limpia línea
+  lcd.setCursor(0, 3);
+  lcd.print(subfrase);
 
-    ultimaAnimacion = ahora;
-  }
+  offsetScroll++;
+  ultimaAnimacion = ahora;
+}
 
   // Botón TARA
   bool estadoTara = digitalRead(PIN_TARA);
@@ -164,9 +192,9 @@ void loop() {
     for (int i = 0; i < NUM_PROMEDIOS; i++) bufferPesos[i] = 0.0;
     pesoUnidad = 0.0;
     lcd.clear();
-    lcd.setCursor(2, 1);
+    lcd.setCursor(2, 0);
     lcd.print("Reseteado.");
-    lcd.setCursor(3, 2);
+    lcd.setCursor(3, 1);
     lcd.print("Espere...");
     delay(1000);
     lcd.clear();
@@ -180,7 +208,7 @@ void loop() {
     float sumaSet = 0.0;
     for (int i = 0; i < NUM_PROMEDIOS; i++) {
       sumaSet += balanza.get_units(1);
-      delay(50);
+      delay(50); // Pequeño retardo entre lecturas
     }
     peso10 = sumaSet / NUM_PROMEDIOS;
     if (peso10 > 1.0) {
@@ -188,9 +216,9 @@ void loop() {
     }
 
     lcd.clear();
-    lcd.setCursor(2, 1);
+    lcd.setCursor(0, 0);
     lcd.print("10 unidades");
-    lcd.setCursor(3, 2);
+    lcd.setCursor(3, 1);
     lcd.print("seteadas");
     delay(1000);
     lcd.clear();
