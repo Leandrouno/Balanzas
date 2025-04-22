@@ -86,7 +86,7 @@ void loop() {
   if (ahora - ultimaActualizacion > intervaloActualizacion) {
     lcd.setCursor(0, 0);
     lcd.print("Peso: ");
-    lcd.print(pesoActual, 3);
+    lcd.print(pesoActual, 2);
     lcd.print(" kg  ");
 
     lcd.setCursor(0, 1);
@@ -95,7 +95,7 @@ void loop() {
     lcd.print("     ");
 
     Serial.print("Peso (kg): ");
-    Serial.print(pesoActual, 3);
+    Serial.print(pesoActual, 2);
     Serial.print(" | Cantidad: ");
     Serial.println(cantidadObjetos);
 
